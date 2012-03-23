@@ -204,22 +204,18 @@ var Ship = function() {
 /* --------------- S Y S T E M ---------------*/
 (function() {
    var onEachFrame;
-   if (window.webkitRequestAnimationFrame) {
+   window.requestAnimationFrame = window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.msRequestAnimationFrame;
+   if (window.requestAnimationFrame) {
       onEachFrame = function(cb) {
-         var _cb = function() { cb(); webkitRequestAnimationFrame(_cb); };
+         var _cb = function() { cb(); window.requestAnimationFrame(_cb); };
          _cb();
       };
-      } else if (window.mozRequestAnimationFrame) {
-         onEachFrame = function(cb) {
-            var _cb = function() { cb(); mozRequestAnimationFrame(_cb); };
-            _cb();
-         };
-     } else {
-     onEachFrame = function(cb) {
-      setInterval(cb, 1000/Game.fps);
-     };
-     }
-     window.onEachFrame = onEachFrame;
+   } else {
+      onEachFrame = function(cb) {
+         setInterval(cb, 1000/Game.fps);
+      };
+   }
+   window.onEachFrame = onEachFrame;
 })();
 Game.initialize();
 window.onEachFrame(Game.run);
