@@ -220,106 +220,157 @@ var Ship = function() {
 Game.initialize();
 window.onEachFrame(Game.run);
 
-/* Coffee *
+/* Game = ->
+  stopped = false
+  fps = 60
+  canvas = document.getElementById("viewport")
+  ctx = canvas.getContext("2d")
+  entities = []
+  skipTicks = 1000 / fps
+  nextGameTick = (new Date()).getTime()
+  drawStats = new Stats()
+  updateStats = new Stats()
+  run = ->
+    loops = 0
+    while (new Date()).getTime() > nextGameTick
+      Game.update()
+      nextGameTick += skipTicks
+      loops++
+    Game.draw()  if loops
 
+  draw = ->
+    ctx.clearRect 0, 0, canvas.width, canvas.height
+    i = 0
 
-helpText = "Drag a box over the set of links you wish to open (press ESC to abort)."
-$("body").append "<div id=\"openmasseHelp\">" + helpText + "</div>"
-$("#openmasseHelp").css
-  "background-color": "lightgrey"
-  position: "fixed"
-  top: "0"
-  left: "0"
-  width: 200
+    while i < entities.length
+      entities[i].draw()
+      i++
+    drawStats.update()
 
-$("#openmasseHelp").mouseover ->
-  if $("#openmasseHelp").position().left is 0
-    $("#openmasseHelp").css
-      left: "auto"
-      right: "0"
+  update = ->
+    i = 0
+
+    while i < entities.length
+      entities[i].update()
+      i++
+    updateStats.update()
+
+  initialize = ->
+    updateStats.domElement.style.position = "absolute"
+    updateStats.domElement.style.left = "0px"
+    updateStats.domElement.style.top = "0px"
+    drawStats.domElement.style.position = "absolute"
+    drawStats.domElement.style.left = "200px"
+    drawStats.domElement.style.top = "0px"
+    document.body.appendChild updateStats.domElement
+    document.body.appendChild drawStats.domElement
+    resize()
+    window.addEventListener "resize", resize, false
+    entities.push new Ship()
+
+  resize = ->
+    canvas.width = window.innerWidth
+    canvas.height = window.innerHeight
+
+  run: run
+  draw: draw
+  update: update
+  entities: entities
+  initialize: initialize
+  resize: resize
+  ctx: ctx
+()
+Player = ->
+  input =
+    left: false
+    right: false
+    up: false
+    down: false
+
+  onKeydown = (e) ->
+    c = e.keyCode
+    switch c
+      when 37
+        input.left = true
+      when 65
+        input.left = true
+      when 38
+        input.up = true
+      when 87
+        input.up = true
+      when 39
+        input.right = true
+      when 68
+        input.right = true
+      when 40
+        input.down = true
+      when 83
+        input.down = true
+
+  onKeyup = (e) ->
+    c = e.keyCode
+    switch c
+      when 37
+        input.left = false
+      when 65
+        input.left = false
+      when 38
+        input.up = false
+      when 87
+        input.up = false
+      when 39
+        input.right = false
+      when 68
+        input.right = false
+      when 40
+        input.down = false
+      when 83
+        input.down = false
+
+  window.addEventListener "keydown", onKeydown, false
+  window.addEventListener "keyup", onKeyup, false
+  input: input
+  onKeydown: onKeydown
+  onKeyup: onKeyup
+()
+Ship = ->
+  x = 0
+  y = 0
+  vel = 5
+  draw = ->
+    Game.ctx.fillRect x, y, 30, 30
+
+  update = ->
+    v = undefined
+    if (Player.input.up or Player.input.down) and (Player.input.left or Player.input.right)
+      v = vel / 1.414
+    else
+      v = vel
+    y -= v  if Player.input.up
+    y += v  if Player.input.down
+    x -= v  if Player.input.left
+    x += v  if Player.input.right
+
+  draw: draw
+  update: update
+
+(->
+  onEachFrame = undefined
+  window.requestAnimationFrame = window.webkitRequestAnimationFrame or window.mozRequestAnimationFrame or window.msRequestAnimationFrame
+  if window.requestAnimationFrame
+    onEachFrame = (cb) ->
+      _cb = ->
+        cb()
+        window.requestAnimationFrame _cb
+
+      _cb()
   else
-    $("#openmasseHelp").css
-      right: "auto"
-      left: "0"
-
-from = undefined
-to = undefined
-$("html").mousedown (event) ->
-  event.preventDefault()
-  console.log "dragging started at x=" + event.pageX + ",y=" + event.pageY
-  from =
-    x: event.pageX
-    y: event.pageY
-
-  $("body").append "<div id=\"openmasseBox\"></div>"
-  $("#openmasseBox").css
-    "background-color": "grey"
-    opacity: 0.5
-    position: "absolute"
-    top: event.pageY
-    left: event.pageX
-    width: 0
-    height: 0
-
-  $("html").mousemove (eventmove) ->
-    if eventmove.pageX >= from.x and eventmove.pageY >= from.y
-      $("#openmasseBox").css
-        top: from.y
-        left: from.x
-        width: eventmove.pageX - from.x
-        height: eventmove.pageY - from.y
-    else if eventmove.pageX >= from.x and eventmove.pageY <= from.y
-      $("#openmasseBox").css
-        top: eventmove.pageY
-        left: from.x
-        width: eventmove.pageX - from.x
-        height: from.y - eventmove.pageY
-    if eventmove.pageX <= from.x and eventmove.pageY >= from.y
-      $("#openmasseBox").css
-        top: from.y
-        left: eventmove.pageX
-        width: from.x - eventmove.pageX
-        height: eventmove.pageY - from.y
-    if eventmove.pageX <= from.x and eventmove.pageY <= from.y
-      $("#openmasseBox").css
-        top: eventmove.pageY
-        left: eventmove.pageX
-        width: from.x - eventmove.pageX
-        height: from.y - eventmove.pageY
-
-$("html").click (event) ->
-  event.preventDefault()
-
-$("html").mouseup (event) ->
-  event.preventDefault()
-  console.log "dragging stopped at x=" + event.pageX + ",y=" + event.pageY
-  to =
-    x: event.pageX
-    y: event.pageY
-
-  $("html").unbind "mousemove"
-  $("#openmasseBox").remove()
-  links = []
-  $("a").each ->
-    links.push $(this).attr("href")  if (from.x <= $(this).offset().left + $(this).width() and to.x >= $(this).offset().left) or (from.x >= $(this).offset().left and to.x <= $(this).offset().left + $(this).width()) and (from.y <= $(this).offset().top + $(this).height() and to.y >= $(this).offset().top) or (from.y >= $(this).offset().top and to.y <= $(this).offset().top + $(this).height())
-
-  if links.length > 0
-    links = $.uniqueArray(links)
-    console.log links
-  $.each links, (index, value) ->
-    window.open value
-
-$("html").keydown ->
-  if event.keyCode is "27"
-    $("html").unbind "mousedown"
-    $("html").unbind "mouseup"
-    $("html").unbind "click"
-    $("#openmasseHelp").remove()
-    $("html").unbind "mousemove"
-    $("#openmasseBox").remove()
-
-
-/
+    onEachFrame = (cb) ->
+      setInterval cb, 1000 / Game.fps
+  window.onEachFrame = onEachFrame
+)()
+Game.initialize()
+window.onEachFrame Game.run */
    </script>
 </body>
 </html>
